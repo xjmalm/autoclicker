@@ -34,6 +34,13 @@ APP_NAME = "AutoClicker"
 APP_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / APP_NAME
 SETTINGS_FILE = APP_DIR / "settings.json"
 
+
+def resource_path(name: str) -> str:
+    """返回源码运行或 PyInstaller 打包后的资源路径。"""
+    base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_dir, name)
+
+
 DEFAULT_SETTINGS = {
     "button": "left",
     "click_mode": "single",
@@ -499,6 +506,7 @@ class AutoClickerApp:
         self.root = tk.Tk()
         self.root.title("鼠标连点器")
         self.root.resizable(True, True)
+        self._set_window_icon()
 
         self._settings_lock = threading.Lock()
         self._current_settings = dict(DEFAULT_SETTINGS)
@@ -530,6 +538,14 @@ class AutoClickerApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.after(50, self._poll_ui_queue)
         self.root.after(100, self._refresh_status)
+
+    def _set_window_icon(self) -> None:
+        icon_path = resource_path("app.ico")
+        try:
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+        except Exception:
+            pass
 
     # ---------- UI 初始化 ----------
 
