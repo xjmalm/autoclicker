@@ -614,12 +614,18 @@ class AutoClickerApp:
         self.status_indicator.pack(side="left", padx=(0, 7))
         ttk.Label(status_frame, textvariable=self.status_var, anchor="w").pack(side="left", fill="x", expand=True)
 
-        hotkey_note = ttk.Label(
-            main,
+        footer_frame = ttk.Frame(main)
+        footer_frame.pack(fill="x", pady=(8, 0))
+        ttk.Label(
+            footer_frame,
             text="快捷键：F8 捕获坐标 | F9 开始/停止 | F10 强制停止",
             foreground="#666666",
-        )
-        hotkey_note.pack(anchor="w", pady=(8, 0))
+        ).pack(side="left")
+        ttk.Label(
+            footer_frame,
+            text="作者：闲人老马",
+            foreground="#888888",
+        ).pack(side="right")
 
     def _bind_variable_traces(self) -> None:
         variables = (
