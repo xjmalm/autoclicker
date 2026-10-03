@@ -2,6 +2,8 @@
 
 一个 Windows 桌面鼠标连点器，使用 Python + Tkinter + ctypes 开发，调用 Windows 原生 API，无需安装第三方 Python 包。
 
+[![screen](app_screen.png)]
+
 ## 功能
 
 - 鼠标按键：左键、右键、中键
