@@ -111,3 +111,9 @@ python .\make_icon.py
 - `RegisterHotKey`：注册全局快捷键
 - `timeBeginPeriod(1)` / `timeEndPeriod(1)`：提高定时精度
 - 独立后台线程执行点击任务，避免阻塞界面
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
