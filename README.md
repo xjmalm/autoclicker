@@ -12,7 +12,7 @@
 - 点击速度：每秒 100 次、每秒 10 次、每秒 1 次、自定义毫秒间隔
 - 重复方式：一直执行、重复次数、执行时长
 - 全局快捷键：F8 捕获坐标，F9 开始/停止，F10 强制停止
-- 配置自动保存到 `%APPDATA%\AutoClicker\settings.json`
+- 配置自动保存到 `%APPDATA%\AutoClicker\settings.json`（商店打包版会被系统重定向到包私有目录）
 
 ## 运行
 
@@ -87,10 +87,70 @@ python .\make_icon.py
 
 ### 打包后注意事项
 
-- 配置仍保存到 `%APPDATA%\AutoClicker\settings.json`。
+- 配置仍保存到 `%APPDATA%\AutoClicker\settings.json`，商店打包版会被系统重定向到包私有目录并在卸载时清理。
 - 单文件版第一次启动会稍慢，因为需要先解压临时文件。
 - 如果要点击以管理员身份运行的程序，请右键 `AutoClicker.exe` 并选择“以管理员身份运行”。
 - 如果杀毒软件误报，可改用文件夹版或添加信任。
+
+## 上架微软商店（MSIX）
+
+商店目前支持两条提交路径：MSIX 打包（微软免费代签、免费托管、系统自动更新）和
+直接提交 EXE/MSI 安装包（需要自己购买代码签名证书、自建 HTTPS 下载地址）。
+本项目采用 MSIX 路线，相关文件都在 `packaging\` 目录下。
+
+商店版与免安装版有两处行为差异，上架前需要知晓：
+
+- MSIX 应用固定以普通用户权限运行，无法“以管理员身份运行”，因此不能点击以管理员
+  权限运行的程序，这一点需要在商店描述里作为已知限制写明。
+- 打包后写入 `%APPDATA%` 的内容会被重定向到包私有目录，并在卸载时一并清理。
+
+### 1. 注册开发者账号
+
+打开 <https://storedeveloper.microsoft.com>，选择 “Get started for free”，用个人
+Microsoft 账号注册 Individual 开发者账号（当前免注册费），按提示用政府证件加自拍
+完成身份验证，然后进入 Partner Center。
+
+### 2. 预留应用名称
+
+在 Partner Center 的 “Apps and games” 中新建产品并预留名称，名称需要全商店唯一。
+之后在“产品管理 → 查看应用身份详细信息”里可以看到三个值：
+`Package/Identity/Name`、`Package/Identity/Publisher`、
+`Package/Properties/PublisherDisplayName`。
+
+### 3. 填写身份并打包
+
+把上面的值填进 `packaging\store-identity.json`，然后执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\packaging\build_msix.ps1 -RequireIdentity
+```
+
+脚本依次完成：PyInstaller onedir 打包 → 生成图标资源 → 组装打包目录 → 调用
+Windows SDK 的 makeappx，最终得到 `dist\msix\AutoClicker_<版本>_<架构>.msix`。
+
+几点说明：
+
+- 需要 makeappx.exe，脚本会自动从 `C:\Program Files (x86)\Windows Kits\10\bin`
+  查找；也可以用 `-MakeAppx` 指定。
+- 想先在本机试装，可以加 `-SelfSign` 用自签名证书签名，把导出的
+  `dist\msix\AutoClicker-Dev.cer` 导入“受信任人”证书存储后执行
+  `Add-AppxPackage`。
+- 图标资源由 `packaging\make_msix_assets.py` 从 `app_preview.png` 生成，结果存放在
+  `packaging\assets\`，已经随仓库提交，换图标后重新运行脚本即可。
+- 只想出免安装版本时，`AutoClicker.spec` 现在也是 onedir 配置，直接
+  `python -m PyInstaller --noconfirm --clean AutoClicker.spec` 即可。
+
+### 4. 提交审核
+
+在 Partner Center 上传 `.msix` 并填写商店信息，`packaging\store-listing.md` 里准备了
+描述、搜索词、系统要求、受限能力说明和认证备注的文本模板。
+
+两个容易踩的点：
+
+- 清单声明了 `runFullTrust` 受限能力，提交时 Partner Center 会要求说明用途，
+  认证因此可能多花几天。
+- 类别选“实用工具和工具 / 生产力”，不要选游戏；描述中不要出现游戏挂机或作弊
+  相关的表述，否则容易被判定违规。
 
 ## 使用说明
 

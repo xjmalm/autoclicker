@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "在 Partner Center 预留应用名称后，把『产品管理 → 查看应用身份详细信息』里的值填到这里，",
+    "然后重新运行 packaging\\build_msix.ps1。Identity 字段必须与 Partner Center 完全一致，",
+    "大小写和标点都不能改，否则上传时会报身份不匹配。",
+    "version 必须是四段数字，每次提交新包都要比上一版大，例如 1.0.1.0。"
+  ],
+  "identityName": "TO_FILL_00000.PublisherName.AppName",
+  "publisher": "CN=TO_FILL_00000000-0000-0000-0000-000000000000",
+  "publisherDisplayName": "TO_FILL 发布者名称",
+  "displayName": "鼠标连点器",
+  "description": "鼠标连点器：按 F9 开始或停止自动点击，支持自定义按键、速度与重复方式。",
+  "version": "1.0.0.0"
+}
