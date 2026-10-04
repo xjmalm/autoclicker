@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!--
-  AutoClicker.exe 的 Windows 应用程序清单，由 AutoClicker.spec 嵌入 exe。
+  FigAutoClicker.exe 的 Windows 应用程序清单，由 FigAutoClicker.spec 嵌入 exe。
   作用：
   - requestedExecutionLevel=asInvoker：始终以普通用户权限启动。Microsoft Store
     打包应用无法提权，这里保持一致可以避免行为差异。
@@ -8,8 +8,8 @@
   - Common-Controls 6.0：使用现代控件外观。
 -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity type="win32" name="AutoClicker" version="1.0.0.0" processorArchitecture="*" />
-  <description>AutoClicker</description>
+  <assemblyIdentity type="win32" name="FigAutoClicker" version="1.0.0.0" processorArchitecture="*" />
+  <description>FigAutoClicker</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>

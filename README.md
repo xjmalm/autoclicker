@@ -12,7 +12,7 @@
 - 点击速度：每秒 100 次、每秒 10 次、每秒 1 次、自定义毫秒间隔
 - 重复方式：一直执行、重复次数、执行时长
 - 全局快捷键：F8 捕获坐标，F9 开始/停止，F10 强制停止
-- 配置自动保存到 `%APPDATA%\AutoClicker\settings.json`（商店打包版会被系统重定向到包私有目录）
+- 配置自动保存到 `%APPDATA%\FigAutoClicker\settings.json`（商店打包版会被系统重定向到包私有目录）
 
 ## 运行
 
@@ -39,20 +39,20 @@ python -m pip install pyinstaller
 在项目目录执行：
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name AutoClicker autoclicker.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name FigAutoClicker autoclicker.py
 ```
 
 参数说明：
 
 - `--onefile`：打包成单个 exe
 - `--windowed`：启动时不显示黑色命令行窗口
-- `--name AutoClicker`：输出文件名为 `AutoClicker.exe`
+- `--name FigAutoClicker`：输出文件名为 `FigAutoClicker.exe`
 - `--clean`：清理旧的临时文件
 
 打包完成后，可执行文件位于：
 
 ```text
-dist\AutoClicker.exe
+dist\FigAutoClicker.exe
 ```
 
 ### 打包成文件夹版
@@ -60,13 +60,13 @@ dist\AutoClicker.exe
 如果希望启动更快，或减少杀毒软件误报，可以不使用 `--onefile`：
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --windowed --name AutoClicker autoclicker.py
+python -m PyInstaller --noconfirm --clean --windowed --name FigAutoClicker autoclicker.py
 ```
 
 输出目录为：
 
 ```text
-dist\AutoClicker\
+dist\FigAutoClicker\
 ```
 
 ### 添加程序图标
@@ -74,7 +74,7 @@ dist\AutoClicker\
 准备一个 `.ico` 文件，例如 `app.ico`，然后执行：
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name AutoClicker --icon app.ico autoclicker.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name FigAutoClicker --icon app.ico autoclicker.py
 ```
 
 建议 `.ico` 包含 `256x256` 尺寸，以便在 Windows 桌面上清晰显示。
@@ -87,9 +87,9 @@ python .\make_icon.py
 
 ### 打包后注意事项
 
-- 配置仍保存到 `%APPDATA%\AutoClicker\settings.json`，商店打包版会被系统重定向到包私有目录并在卸载时清理。
+- 配置仍保存到 `%APPDATA%\FigAutoClicker\settings.json`，商店打包版会被系统重定向到包私有目录并在卸载时清理。
 - 单文件版第一次启动会稍慢，因为需要先解压临时文件。
-- 如果要点击以管理员身份运行的程序，请右键 `AutoClicker.exe` 并选择“以管理员身份运行”。
+- 如果要点击以管理员身份运行的程序，请右键 `FigAutoClicker.exe` 并选择“以管理员身份运行”。
 - 如果杀毒软件误报，可改用文件夹版或添加信任。
 
 ## 上架微软商店（MSIX）
@@ -126,21 +126,31 @@ powershell -ExecutionPolicy Bypass -File .\packaging\build_msix.ps1 -RequireIden
 ```
 
 脚本依次完成：PyInstaller onedir 打包 → 生成图标资源 → 组装打包目录 → 调用
-Windows SDK 的 makeappx，最终得到 `dist\msix\AutoClicker_<版本>_<架构>.msix`。
+Windows SDK 的 makeappx，最终得到 `dist\msix\FigAutoClicker_<版本>_<架构>.msix`。
 
 几点说明：
 
 - 需要 makeappx.exe，脚本会自动从 `C:\Program Files (x86)\Windows Kits\10\bin`
   查找；也可以用 `-MakeAppx` 指定。
 - 想先在本机试装，可以加 `-SelfSign` 用自签名证书签名，把导出的
-  `dist\msix\AutoClicker-Dev.cer` 导入“受信任人”证书存储后执行
+  `dist\msix\FigAutoClicker-Dev.cer` 导入“受信任人”证书存储后执行
   `Add-AppxPackage`。
 - 图标资源由 `packaging\make_msix_assets.py` 从 `app_preview.png` 生成，结果存放在
   `packaging\assets\`，已经随仓库提交，换图标后重新运行脚本即可。
-- 只想出免安装版本时，`AutoClicker.spec` 现在也是 onedir 配置，直接
-  `python -m PyInstaller --noconfirm --clean AutoClicker.spec` 即可。
+- 只想出免安装版本时，`FigAutoClicker.spec` 现在也是 onedir 配置，直接
+  `python -m PyInstaller --noconfirm --clean FigAutoClicker.spec` 即可。
 
-### 4. 提交审核
+### 4. 版本号怎么改
+
+版本号只在 `autoclicker.py` 的 `__version__` 里维护一处（当前是 `1.0.0`）：
+
+- 应用页脚显示的 `v1.0.0`、「关于」对话框、exe 属性里的文件版本与产品版本，
+  以及 MSIX 的四段包版本 `1.0.0.0`，全部由这一个值派生。
+- 上架新版本时把第三位加一（`1.0.0` → `1.0.1`），第四位保持 0。商店要求每次
+  提交的包版本必须比上一版大，所以不要只改界面上的显示。
+- 特殊情况下需要用别的包版本，可以在打包时加 `-PackageVersion 1.0.1.0` 覆盖。
+
+### 5. 提交审核
 
 在 Partner Center 上传 `.msix` 并填写商店信息，`packaging\store-listing.md` 里准备了
 描述、搜索词、系统要求、受限能力说明和认证备注的文本模板。
@@ -173,6 +183,11 @@ Windows SDK 的 makeappx，最终得到 `dist\msix\AutoClicker_<版本>_<架构>
 - `RegisterHotKey`：注册全局快捷键
 - `timeBeginPeriod(1)` / `timeEndPeriod(1)`：提高定时精度
 - 独立后台线程执行点击任务，避免阻塞界面
+
+## 隐私政策
+
+本应用不收集、不存储、不传输任何个人信息，也不联网，仅在本地保存您的设置。
+完整说明（中英文）见 [PRIVACY.md](PRIVACY.md)。
 
 ## License
 

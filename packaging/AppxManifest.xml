@@ -37,7 +37,7 @@
   <Applications>
     <Application
       Id="App"
-      Executable="AutoClicker.exe"
+      Executable="FigAutoClicker.exe"
       EntryPoint="Windows.FullTrustApplication"
       uap10:TrustLevel="mediumIL">
       <uap:VisualElements

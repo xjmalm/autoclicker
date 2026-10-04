@@ -88,7 +88,7 @@
 
 粘贴以下英文说明，帮助测试人员快速验证功能：
 
-> No account or network connection is required. Launch AutoClicker.exe, leave
+> No account or network connection is required. Launch FigAutoClicker.exe, leave
 > the defaults (left button, single click, follow cursor, 1 click per second),
 > then press F9 to start and F9 again to stop. Press F8 to capture the current
 > cursor position into the fixed-coordinate fields, and F10 to force stop. The

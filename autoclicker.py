@@ -30,7 +30,12 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit("当前 Python 环境缺少 Tkinter，无法启动图形界面。") from exc
 
 
-APP_NAME = "AutoClicker"
+APP_NAME = "FigAutoClicker"
+APP_TITLE = "鼠标连点器"
+APP_AUTHOR = "闲人老马"
+# 用户可见版本，全局唯一来源。exe 的版本资源和 MSIX 的四段包版本都由构建流程
+# 从这里派生（见 FigAutoClicker.spec 与 packaging/build_msix.ps1），不要另外维护。
+__version__ = "1.0.0"
 APP_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / APP_NAME
 SETTINGS_FILE = APP_DIR / "settings.json"
 
@@ -501,10 +506,10 @@ class HotkeyListener:
                 self._win32.user32.UnregisterHotKey(None, hotkey_id)
 
 
-class AutoClickerApp:
+class FigAutoClickerApp:
     def __init__(self) -> None:
         self.root = tk.Tk()
-        self.root.title("鼠标连点器")
+        self.root.title(APP_TITLE)
         self.root.resizable(True, True)
         self._set_window_icon()
 
@@ -547,6 +552,47 @@ class AutoClickerApp:
         except Exception:
             pass
 
+    def _show_about(self) -> None:
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"关于 {APP_TITLE}")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+
+        body = ttk.Frame(dialog, padding=16)
+        body.pack(fill="both", expand=True)
+        ttk.Label(
+            body,
+            text=f"{APP_TITLE} {__version__}",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        ttk.Label(
+            body,
+            text="一个轻量的 Windows 鼠标连点器，调用系统原生接口模拟鼠标输入，完全离线运行。",
+            wraplength=340,
+            justify="left",
+        ).pack(anchor="w", pady=(8, 0))
+        ttk.Label(
+            body,
+            text=f"作者：{APP_AUTHOR}\n许可：MIT License\n程序标识：{APP_NAME}",
+            justify="left",
+        ).pack(anchor="w", pady=(10, 0))
+        ttk.Label(
+            body,
+            text="已知限制：以普通用户权限运行，无法点击以管理员权限运行的程序。",
+            wraplength=340,
+            justify="left",
+            foreground="#666666",
+        ).pack(anchor="w", pady=(10, 0))
+        ttk.Button(body, text="关闭", command=dialog.destroy).pack(anchor="e", pady=(14, 0))
+
+        dialog.bind("<Escape>", lambda _event: dialog.destroy())
+        dialog.update_idletasks()
+        x = self.root.winfo_rootx() + (self.root.winfo_width() - dialog.winfo_width()) // 2
+        y = self.root.winfo_rooty() + (self.root.winfo_height() - dialog.winfo_height()) // 3
+        dialog.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        dialog.grab_set()
+        dialog.wait_window()
+
     # ---------- UI 初始化 ----------
 
     def _create_variables(self) -> None:
@@ -564,6 +610,7 @@ class AutoClickerApp:
 
     def _build_ui(self) -> None:
         padding = {"padx": 12, "pady": 4}
+        ttk.Style(self.root).configure("Link.TLabel", foreground="#0a66c2")
         main = ttk.Frame(self.root, padding=12)
         main.pack(fill="both", expand=True)
 
@@ -637,9 +684,17 @@ class AutoClickerApp:
             text="快捷键：F8 捕获坐标 | F9 开始/停止 | F10 强制停止",
             foreground="#666666",
         ).pack(side="left")
+        about_link = ttk.Label(footer_frame, text="关于", style="Link.TLabel", cursor="hand2")
+        about_link.pack(side="right")
+        about_link.bind("<Button-1>", lambda _event: self._show_about())
         ttk.Label(
             footer_frame,
-            text="作者：闲人老马",
+            text=f"v{__version__}",
+            foreground="#888888",
+        ).pack(side="right", padx=(0, 10))
+        ttk.Label(
+            footer_frame,
+            text=f"作者：{APP_AUTHOR}",
             foreground="#888888",
         ).pack(side="right")
 
@@ -807,18 +862,19 @@ class AutoClickerApp:
 
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
-        print("AutoClicker selftest")
+        print("FigAutoClicker selftest")
+        print(f"Version: {__version__}")
         print(f"Input structure size: {ctypes.sizeof(Input)}")
         print(f"Settings path: {SETTINGS_FILE}")
         return 0
 
     try:
-        app = AutoClickerApp()
+        app = FigAutoClickerApp()
     except Exception as exc:  # pragma: no cover
         try:
             root = tk.Tk()
             root.withdraw()
-            messagebox.showerror("鼠标连点器", f"启动失败：{exc}")
+            messagebox.showerror(APP_TITLE, f"启动失败：{exc}")
             root.destroy()
         except Exception:
             print(f"启动失败：{exc}", file=sys.stderr)

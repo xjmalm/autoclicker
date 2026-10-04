@@ -1,10 +1,13 @@
-<#
+﻿<#
+    注意：本文件包含中文，必须保存为「UTF-8 with BOM」。Windows PowerShell 5.1
+    在没有 BOM 时会按系统 ANSI 代码页解析脚本，中文会变成乱码并报语法错误。
+ 
 .SYNOPSIS
     构建可提交到 Microsoft Store 的 MSIX 安装包。
 
 .DESCRIPTION
     流程：PyInstaller(onedir) -> 生成图标资源 -> 组装打包目录 -> makeappx 打包。
-    产物：dist\msix\AutoClicker_<版本>_<架构>.msix，可直接上传到 Partner Center。
+    产物：dist\msix\FigAutoClicker_<版本>_<架构>.msix，可直接上传到 Partner Center。
 
 .PARAMETER Python
     构建用的 Python 解释器路径，默认自动探测。
@@ -14,9 +17,11 @@
 
 .PARAMETER OutputDir
     MSIX 输出目录，默认 dist\msix。
+.PARAMETER PackageVersion
+    手动指定四段式包版本；默认从 autoclicker.py 的 __version__ 派生。
 
 .PARAMETER SkipAppBuild
-    跳过 PyInstaller，直接复用已有的 dist\AutoClicker。
+    跳过 PyInstaller，直接复用已有的 dist\FigAutoClicker。
 
 .PARAMETER SkipAssets
     跳过图标生成，直接使用 packaging\assets 中已有的文件。
@@ -38,6 +43,7 @@ param(
     [string]$Python,
     [string]$MakeAppx,
     [string]$OutputDir,
+    [string]$PackageVersion,
     [switch]$SkipAppBuild,
     [switch]$SkipAssets,
     [switch]$RequireIdentity,
@@ -70,6 +76,14 @@ function Get-Prop($Object, [string]$Name) {
 
 function ConvertTo-XmlText([string]$Text) {
     return $Text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
+}
+
+function Get-AppVersion([string]$SourcePath) {
+    # 版本号只在 autoclicker.py 里维护一处，exe 版本资源和包版本都由它派生。
+    $text = [System.IO.File]::ReadAllText($SourcePath)
+    $match = [regex]::Match($text, '(?m)^__version__\s*=\s*"([^"]+)"')
+    if (-not $match.Success) { Fail "在 autoclicker.py 中找不到 __version__ 定义。" }
+    return $match.Groups[1].Value
 }
 
 function Get-PeArchitecture([string]$Path) {
@@ -122,16 +136,14 @@ $fields = [ordered]@{
     publisherDisplayName = (Get-Prop $identity 'publisherDisplayName')
     displayName          = (Get-Prop $identity 'displayName')
     description          = (Get-Prop $identity 'description')
-    version              = (Get-Prop $identity 'version')
 }
 
 $fallback = @{
-    identityName         = 'AutoClicker.Dev'
+    identityName         = 'FigAutoClicker.Dev'
     publisher            = 'CN=00000000-0000-0000-0000-000000000000'
-    publisherDisplayName = 'AutoClicker Dev'
-    displayName          = '鼠标连点器'
+    publisherDisplayName = 'FigAutoClicker Dev'
+    displayName          = 'FigAutoClicker'
     description          = '鼠标连点器'
-    version              = '1.0.0.0'
 }
 
 $pending = @()
@@ -151,8 +163,17 @@ if ($pending.Count -gt 0) {
     Write-Host ("  " + ($pending -join '、')) -ForegroundColor Yellow
 }
 
-if ($fields.version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
-    Fail "version 必须是四段数字（例如 1.0.0.0），当前为：$($fields.version)"
+$version = $PackageVersion
+if (-not $version) {
+    $appVersion = Get-AppVersion (Join-Path $RepoRoot 'autoclicker.py')
+    if ($appVersion -notmatch '^\d+\.\d+\.\d+$') {
+        Fail "__version__ 必须是三段数字（例如 1.0.0），当前为：$appVersion"
+    }
+    $version = "$appVersion.0"
+    Write-Host "应用版本：$appVersion  →  MSIX 包版本：$version"
+}
+if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+    Fail "包版本必须是四段数字（例如 1.0.0.0），当前为：$version"
 }
 if ($fields.publisher -notmatch '^CN=') {
     Fail "publisher 必须以 CN= 开头，请直接复制 Partner Center 上的值。"
@@ -173,13 +194,15 @@ Write-Host "Python：$pythonExe"
 
 if (-not $SkipAppBuild) {
     Write-Step "PyInstaller 打包（onedir）"
-    & $pythonExe -m PyInstaller --version *> $null
+    # 用 find_spec 静默探测：如果直接跑 PyInstaller，缺包时 Python 会往 stderr
+    # 写回溯，而 Windows PowerShell 5.1 在重定向 stderr 时会把它当成终止错误。
+    & $pythonExe -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('PyInstaller') else 1)"
     if ($LASTEXITCODE -ne 0) {
         Fail "该 Python 未安装 PyInstaller，请执行：`"$pythonExe`" -m pip install pyinstaller"
     }
     Push-Location $RepoRoot
     try {
-        & $pythonExe -m PyInstaller --noconfirm --clean AutoClicker.spec
+        & $pythonExe -m PyInstaller --noconfirm --clean FigAutoClicker.spec
         if ($LASTEXITCODE -ne 0) { Fail "PyInstaller 构建失败。" }
     }
     finally {
@@ -197,7 +220,7 @@ if (-not $SkipAssets) {
     $assetPython = $null
     foreach ($candidate in @($pythonExe, $BundledPython)) {
         if (-not (Test-Path -LiteralPath $candidate)) { continue }
-        & $candidate -c "import PIL" *> $null
+        & $candidate -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('PIL') else 1)"
         if ($LASTEXITCODE -eq 0) {
             $assetPython = $candidate
             break
@@ -221,8 +244,8 @@ foreach ($asset in $requiredAssets) {
 # ---------------------------------------------------------------- 组装打包目录
 
 Write-Step "组装打包目录"
-$appDir = Join-Path $RepoRoot 'dist\AutoClicker'
-$appExe = Join-Path $appDir 'AutoClicker.exe'
+$appDir = Join-Path $RepoRoot 'dist\FigAutoClicker'
+$appExe = Join-Path $appDir 'FigAutoClicker.exe'
 if (-not (Test-Path -LiteralPath $appExe)) {
     Fail "未找到 $appExe。请先执行 PyInstaller 打包，或去掉 -SkipAppBuild 参数。"
 }
@@ -253,7 +276,7 @@ $tokens = @{
     '{{PUBLISHER_DISPLAY_NAME}}' = (ConvertTo-XmlText $fields.publisherDisplayName)
     '{{DISPLAY_NAME}}'           = (ConvertTo-XmlText $fields.displayName)
     '{{DESCRIPTION}}'            = (ConvertTo-XmlText $fields.description)
-    '{{VERSION}}'                = $fields.version
+    '{{VERSION}}'                = $version
     '{{ARCH}}'                   = $arch
 }
 foreach ($token in @($tokens.Keys)) {
@@ -287,7 +310,7 @@ $makeappxExe = Resolve-SdkTool 'makeappx.exe' $MakeAppx
 Write-Host "makeappx：$makeappxExe"
 $outputDirectory = if ($OutputDir) { $OutputDir } else { Join-Path $RepoRoot 'dist\msix' }
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
-$packagePath = Join-Path $outputDirectory ("AutoClicker_{0}_{1}.msix" -f $fields.version, $arch)
+$packagePath = Join-Path $outputDirectory ("FigAutoClicker_{0}_{1}.msix" -f $version, $arch)
 
 & $makeappxExe pack /d $layoutDir /p $packagePath /o
 if ($LASTEXITCODE -ne 0) { Fail "makeappx 打包失败，请查看上面的错误信息。" }
@@ -295,17 +318,17 @@ if ($LASTEXITCODE -ne 0) { Fail "makeappx 打包失败，请查看上面的错�
 if ($SelfSign) {
     Write-Step "自签名（仅用于本机测试）"
     $signtoolExe = Resolve-SdkTool 'signtool.exe' $null
-    $subject = 'CN=AutoClicker Dev'
+    $subject = 'CN=FigAutoClicker Dev'
     $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $subject } | Select-Object -First 1
     if (-not $cert) {
         Write-Host "创建自签名证书：$subject"
-        $cert = New-SelfSignedCertificate -Type Custom -Subject $subject -FriendlyName 'AutoClicker MSIX Dev' `
+        $cert = New-SelfSignedCertificate -Type Custom -Subject $subject -FriendlyName 'FigAutoClicker MSIX Dev' `
             -KeyUsage DigitalSignature -CertStoreLocation 'Cert:\CurrentUser\My' `
             -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3')
     }
     & $signtoolExe sign /fd SHA256 /sha1 $cert.Thumbprint $packagePath
     if ($LASTEXITCODE -ne 0) { Fail "签名失败。" }
-    $cerPath = Join-Path $outputDirectory 'AutoClicker-Dev.cer'
+    $cerPath = Join-Path $outputDirectory 'FigAutoClicker-Dev.cer'
     Export-Certificate -Cert $cert -FilePath $cerPath -Force | Out-Null
     Write-Host "自签名证书已导出：$cerPath"
     Write-Host "本机安装测试前，请先把该证书导入『受信任人』证书存储。"
@@ -319,6 +342,7 @@ Write-Host "打包完成" -ForegroundColor Green
 Write-Host ("  包文件：{0}" -f $packageItem.FullName)
 Write-Host ("  大小：{0:N2} MB" -f ($packageItem.Length / 1MB))
 Write-Host ("  架构：{0}" -f $arch)
+Write-Host ("  版本：{0}" -f $version)
 
 if ($pending.Count -gt 0) {
     Write-Host ""
