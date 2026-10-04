@@ -137,6 +137,8 @@ Windows SDK 的 makeappx，最终得到 `dist\msix\FigAutoClicker_<版本>_<架�
   `Add-AppxPackage`。
 - 图标资源由 `packaging\make_msix_assets.py` 从 `app_preview.png` 生成，结果存放在
   `packaging\assets\`，已经随仓库提交，换图标后重新运行脚本即可。
+- 商店列表用的图片（300×300 磁贴图标、截图等）放在 `packaging\store-images\`，
+  这个目录不参与打包，图片不会进入 MSIX 包。
 - 只想出免安装版本时，`FigAutoClicker.spec` 现在也是 onedir 配置，直接
   `python -m PyInstaller --noconfirm --clean FigAutoClicker.spec` 即可。
 

@@ -1,7 +1,7 @@
 ﻿<#
     注意：本文件包含中文，必须保存为「UTF-8 with BOM」。Windows PowerShell 5.1
     在没有 BOM 时会按系统 ANSI 代码页解析脚本，中文会变成乱码并报语法错误。
- 
+
 .SYNOPSIS
     构建可提交到 Microsoft Store 的 MSIX 安装包。
 
@@ -267,6 +267,8 @@ New-Item -ItemType Directory -Path $layoutDir -Force | Out-Null
 Copy-Item -Path (Join-Path $appDir '*') -Destination $layoutDir -Recurse -Force
 $layoutAssets = Join-Path $layoutDir 'Assets'
 New-Item -ItemType Directory -Path $layoutAssets -Force | Out-Null
+# 只复制 packaging\assets（包内图标资源）。packaging\store-images 放的是商店列表用图，
+# 不参与打包，所以这里不涉及。
 Copy-Item -Path (Join-Path $assetsDir '*') -Destination $layoutAssets -Recurse -Force
 
 $template = Get-Content -LiteralPath (Join-Path $PackagingDir 'AppxManifest.xml') -Raw -Encoding UTF8
